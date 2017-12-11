@@ -117,8 +117,8 @@ def rule2where_with_express(ruledict,keycheck,exp):
             #sqlsegment.append("%s%s?" % (keysql,(sliobj.step and ">=") or ">"))
             #sqlparam.append(sliobj.start)
         if sliobj.stop:
-            onesql,oneparam = ((sliobj.step or 0) & 2 and exp.more_eq(keysql,sliobj.stop)) or \
-                    exp.more(keysql,sliobj.stop)
+            onesql,oneparam = ((sliobj.step or 0) & 1 and exp.less_eq(keysql,sliobj.stop)) or \
+                    exp.less(keysql,sliobj.stop)
             sqlsegment.append(onesql)
             sqlparam.extend(oneparam)
             #sqlsegment.append("%s%s?" % (keysql,(sliobj.step and "<=") or "<"))

@@ -3,6 +3,7 @@
 import os
 import time
 import re
+from collections import namedtuple
 from mydaily.localdb import queryDict
 from mydaily.rootcmd import cmdErr
 from mydaily.rootcmd import cmdHelp
@@ -10,6 +11,8 @@ from mydaily.rootcmd import rootCMD as rcmd
 from mydaily import cmdengine as cmdeg
 from mydaily.editor import edit
 from mydaily.editor import edit
+from mydaily.conf import Conf
+from mydaily.template import tNoteReport
 
 TIME_FMT = lambda ts: time.strftime("%Y-%m-%d %H:%M",time.localtime(ts))
 
@@ -34,7 +37,7 @@ class noteCMD_Add(cmdeg.ArgPath):
     def finalCmd(me,param):
         now = int(time.time())
         eventid = fileID()
-        content = edit(me.app)(eventid,"# note something\n")
+        content = edit(me.app)(eventid,"Write your content use markdown\n")
         title = content.split("\n")[0]
         me.app["DB"]["daily"][(
             "id","ctime","mtime","domain","title","content")] = (
@@ -43,19 +46,7 @@ class noteCMD_Add(cmdeg.ArgPath):
                     )
         return "OK!\n"
 
-@noteCMD_Add.paramete("--t","specify event create time")
-def p_noteCMD_Add_time(param, app):
-    m_df = lambda s: re.match("^([0-9]{4})-([0-9]{2})-([0-9]{2})$",s) and "%Y-%m-%d"
-    m_ds = lambda s: re.match("^(20[0-9]{6})$",s) and "%Y%m%d"
-    m_tf = lambda s: re.match("^([0-9]{4})-([0-9]{2})-([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2})$",s) and "%Y-%m-%d %H:%M:%S"
-    pfmt = m_df(param) or m_ds(param) or m_tf(param) or m_ts(param) or m_tt(param)
-    print(pfmt)
-    try:
-        app["ctime"] = time.mktime(time.strptime(param,pfmt))
-    except:
-        raise cmdErr("time convert error")
-
-@noteCMD_Add.paramete("--dm","specify a domain. [mian] is default")
+@noteCMD_Add.paramete("--dm","specify a domain. [%s] is default" % Conf.dft.domain)
 def p_noteCMD_domain(param, app):
     app["domain"] = param or "mian"
 
@@ -120,6 +111,30 @@ class noteCMD_List(cmdeg.ArgPath):
                 ctime=slice(qtime,None), __orderkey=["ctime"], __ordertype="desc")
         return "\n".join([me.app["lstemp"](*pm) for pm in li])
 
+@noteCMD.path("report","repr")
+@cmdeg.pathNew
+class noteCMD_List(cmdeg.ArgPath):
+    _NOTE = "Report note"
+    _MAXTARGET = 0
+    _VALTUPLE = namedtuple("_VALTUPLE",["ctime","mtime","domain","title","content"])
+    def init(me):
+        me.app["days"] = 6
+        me.app["ctime"] = time.time()
+    def finalCmd(me,param):
+        nowlt = time.localtime(me.app["ctime"])
+        nowdate = int(time.mktime((
+            nowlt.tm_year, nowlt.tm_mon, nowlt.tm_mday, 
+            0,0,0,0,0,0)))
+        qdate = int(time.mktime((
+            nowlt.tm_year, nowlt.tm_mon, nowlt.tm_mday, 
+            0,0,0,0,0,0)) - me.app["days"] * 86400)
+        li = me.app["DB"]["daily"].query("ctime","mtime","domain","title","content",
+                ctime=slice(qdate,None), mtime=slice(None,nowdate,1),
+                __orderkey=["ctime"], __ordertype="desc")
+        objs = [me._VALTUPLE(*one)._asdict() for one in li]
+        return tNoteReport(objs,qdate,nowdate)
+
+@noteCMD_List.paramete("--day", "Event closed days")
 @noteCMD_List.paramete("--day", "Event closed days")
 def p_noteCMD_List_days(param, app):
     app["days"] = (param and int(param)) or 0
@@ -129,3 +144,17 @@ def p_noteCMD_List_days(param, app):
 def p_noteCMD_List_days(param, app):
     app["lstemp"] = lambda eid, ct, mt, dm, tit:\
         "%s C: %s M: %s [%s] - %s" % (eid, TIME_FMT(ct), TIME_FMT(mt), dm, tit)
+
+@noteCMD_List.paramete("--t", "Start time")
+@noteCMD_Add.paramete("--t","specify event create time")
+def p_noteCMD_Add_time(param, app):
+    m_df = lambda s: re.match("^([0-9]{4})-([0-9]{2})-([0-9]{2})$",s) and "%Y-%m-%d"
+    m_ds = lambda s: re.match("^(20[0-9]{6})$",s) and "%Y%m%d"
+    m_tf = lambda s: re.match("^([0-9]{4})-([0-9]{2})-([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2})$",s) and "%Y-%m-%d %H:%M:%S"
+    pfmt = m_df(param) or m_ds(param) or m_tf(param) or m_ts(param) or m_tt(param)
+    print(pfmt)
+    try:
+        app["ctime"] = time.mktime(time.strptime(param,pfmt))
+    except:
+        raise cmdErr("time convert error")
+
