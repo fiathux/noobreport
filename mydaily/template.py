@@ -31,7 +31,7 @@ def tNoteReport(objs,cts,mts):
             }
     datarec["list"] = "\n".join(["- %s (经历%d天，更新 %s)" % (
         i["title"],
-        int((i["ctime"] - i["mtime"])/86400) + 1,
+        int((i["mtime"] - i["ctime"])/86400) + 1,
         time.strftime("%Y-%m-%d",time.localtime(i["mtime"]))
         ) for i in objs])
     datarec["detail"] = "\n\n---------\n\n".join([
@@ -43,8 +43,8 @@ def tNoteReport(objs,cts,mts):
 
 %s""" % (
     i["title"],
-    time.strftime("%Y-%m-%d",time.localtime(i["ctime"])),
-    time.strftime("%Y-%m-%d",time.localtime(i["mtime"])),
+    time.strftime("%Y-%m-%d %H:%M",time.localtime(i["ctime"])),
+    time.strftime("%Y-%m-%d %H:%M",time.localtime(i["mtime"])),
     i["domain"],
     "\n".join(map(lambda s: "###" + s if s and s[0] == "#" else s,
         (i["content"].strip().split("\n"))[1:])),
