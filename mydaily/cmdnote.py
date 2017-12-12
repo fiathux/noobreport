@@ -104,16 +104,23 @@ class noteCMD_List(cmdeg.ArgPath):
             "%s %s [%s] - %s" % (eid,TIME_FMT(mt), dm, tit)
     def finalCmd(me,param):
         nowlt = time.localtime(time.time())
-        qtime = int(time.mktime((
+        nowdate = int(time.mktime((
             nowlt.tm_year, nowlt.tm_mon, nowlt.tm_mday, 
-            0,0,0,0,0,0)) - me.app["days"] * 86400)
-        li = me.app["DB"]["daily"].query("id","ctime","mtime","domain","title",
-                ctime=slice(qtime,None), __orderkey=["ctime"], __ordertype="desc")
+            0,0,0,0,0,0)) + 86399)
+        qdate = int(time.mktime((
+            nowlt.tm_year, nowlt.tm_mon, nowlt.tm_mday, 
+            0,0,0,0,0,0)) - (me.app["days"] - 1) * 86400)
+        li = me.app["DB"]["daily"][
+                queryDict({
+                    ("ctime","mtime"):(slice(qdate,nowdate), slice(qdate,nowdate)),
+                    "__orderkey":["ctime"],
+                    "__ordertype":"desc"
+                    }, ("id","ctime","mtime","domain","title"))]
         return "\n".join([me.app["lstemp"](*pm) for pm in li])
 
 @noteCMD.path("report","repr")
 @cmdeg.pathNew
-class noteCMD_List(cmdeg.ArgPath):
+class noteCMD_Report(cmdeg.ArgPath):
     _NOTE = "Report note"
     _MAXTARGET = 0
     _VALTUPLE = namedtuple("_VALTUPLE",["ctime","mtime","domain","title","content"])
@@ -124,17 +131,20 @@ class noteCMD_List(cmdeg.ArgPath):
         nowlt = time.localtime(me.app["ctime"])
         nowdate = int(time.mktime((
             nowlt.tm_year, nowlt.tm_mon, nowlt.tm_mday, 
-            0,0,0,0,0,0)))
+            0,0,0,0,0,0)) + 86399)
         qdate = int(time.mktime((
             nowlt.tm_year, nowlt.tm_mon, nowlt.tm_mday, 
-            0,0,0,0,0,0)) - me.app["days"] * 86400)
-        li = me.app["DB"]["daily"].query("ctime","mtime","domain","title","content",
-                ctime=slice(qdate,None), mtime=slice(None,nowdate,1),
-                __orderkey=["ctime"], __ordertype="desc")
+            0,0,0,0,0,0)) - (me.app["days"] - 1) * 86400)
+        li = me.app["DB"]["daily"][
+                queryDict({
+                    ("ctime","mtime"):(slice(qdate,nowdate), slice(qdate,nowdate)),
+                    "__orderkey":["ctime"],
+                    "__ordertype":"desc"
+                    }, ("ctime","mtime","domain","title","content"))]
         objs = [me._VALTUPLE(*one)._asdict() for one in li]
         return tNoteReport(objs,qdate,nowdate)
 
-@noteCMD_List.paramete("--day", "Event closed days")
+@noteCMD_Report.paramete("--day", "Event closed days")
 @noteCMD_List.paramete("--day", "Event closed days")
 def p_noteCMD_List_days(param, app):
     app["days"] = (param and int(param)) or 0
@@ -145,14 +155,13 @@ def p_noteCMD_List_days(param, app):
     app["lstemp"] = lambda eid, ct, mt, dm, tit:\
         "%s C: %s M: %s [%s] - %s" % (eid, TIME_FMT(ct), TIME_FMT(mt), dm, tit)
 
-@noteCMD_List.paramete("--t", "Start time")
+@noteCMD_Report.paramete("--t", "Start time")
 @noteCMD_Add.paramete("--t","specify event create time")
 def p_noteCMD_Add_time(param, app):
     m_df = lambda s: re.match("^([0-9]{4})-([0-9]{2})-([0-9]{2})$",s) and "%Y-%m-%d"
     m_ds = lambda s: re.match("^(20[0-9]{6})$",s) and "%Y%m%d"
     m_tf = lambda s: re.match("^([0-9]{4})-([0-9]{2})-([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2})$",s) and "%Y-%m-%d %H:%M:%S"
     pfmt = m_df(param) or m_ds(param) or m_tf(param) or m_ts(param) or m_tt(param)
-    print(pfmt)
     try:
         app["ctime"] = time.mktime(time.strptime(param,pfmt))
     except:

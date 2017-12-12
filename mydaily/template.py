@@ -29,15 +29,16 @@ def tNoteReport(objs,cts,mts):
             "mts":time.strftime("%Y-%m-%d",time.localtime(mts)),
             "count":len(objs),
             }
-    datarec["list"] = "\n".join(["- %s (最后变更 %s)" % (
+    datarec["list"] = "\n".join(["- %s (经历%d天，更新 %s)" % (
         i["title"],
+        int((i["ctime"] - i["mtime"])/86400) + 1,
         time.strftime("%Y-%m-%d",time.localtime(i["mtime"]))
         ) for i in objs])
     datarec["detail"] = "\n\n---------\n\n".join([
 """### %s
 
     记录时间：%s
-    最后修改：%s
+    最后更新：%s
     记录域：%s
 
 %s""" % (

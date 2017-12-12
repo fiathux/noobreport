@@ -5,8 +5,8 @@ import subprocess
 from mydaily.rootcmd import cmdErr
 
 RDPIPE = {"stdout":subprocess.DEVNULL,"stderr":subprocess.DEVNULL}
-#TEST_GVIM = lambda :not subprocess.Popen(["which","gvim"],**RDPIPE).wait() and ["gvim","-f"]
-TEST_GVIM = lambda : None
+TEST_GVIM = lambda :not subprocess.Popen(["which","gvim"],**RDPIPE).wait() and ["gvim","-f"]
+TEST_MACVIM = lambda :not subprocess.Popen(["which","mvim"],**RDPIPE).wait() and ["mvim"]
 TEST_VIM = lambda :not subprocess.Popen(["which","vim"],**RDPIPE).wait() and ["vim"]
 TEST_VI = lambda :not subprocess.Popen(["which","vi"],**RDPIPE).wait() and ["vi"]
 TEST_NANO = lambda :not subprocess.Popen(["which","nano"],**RDPIPE).wait() and ["nano"]
